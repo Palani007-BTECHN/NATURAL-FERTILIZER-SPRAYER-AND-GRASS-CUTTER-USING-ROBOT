@@ -1,0 +1,466 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include<SoftwareSerial.h>
+SoftwareSerial Serial1(11,12);
+
+
+#include<dht.h>  
+#define dht_dpin 8
+
+
+
+dht DHT;
+float tempc,Humidity;
+ int M_val;
+
+
+int relay1=17;
+int relay2=15;
+
+
+int robot2=2;
+int robot1=3;
+int robot3=7;
+int robot4=6;
+
+int grass1=4;
+int grass2=5;
+
+// int seed1=9;
+// int seed2=8;
+
+// //int level1=15;
+// //int level2=16;
+
+int echo_pin=9;
+int trigger=10;
+
+//String ch,rw;
+char ch,rw;
+
+
+void setup() {
+
+   Serial.begin(9600);
+   Serial1.begin(9600);
+   
+   
+ //  pinMode(dht_pin,INPUT);
+       
+   pinMode(robot1,OUTPUT);
+   pinMode(robot2,OUTPUT);
+   pinMode(robot3,OUTPUT);
+   pinMode(robot4,OUTPUT);
+
+  pinMode(trigger,OUTPUT);
+  pinMode(echo_pin,INPUT);
+
+   pinMode(grass1,OUTPUT);
+   pinMode(grass2,OUTPUT);
+    
+  //  pinMode(seed1,OUTPUT);
+  //  pinMode(seed2,OUTPUT);
+
+  
+   pinMode(relay1,OUTPUT);
+   pinMode(relay2,OUTPUT);
+                                                                                                                                                                                                                                                                                                       
+   digitalWrite(robot1,LOW);
+   digitalWrite(robot2,LOW);
+   digitalWrite(robot3,LOW);
+   digitalWrite(robot4,LOW);
+
+   
+   digitalWrite(grass1,LOW);
+   digitalWrite(grass2,LOW);
+
+  //  digitalWrite(seed1,LOW);
+  //  digitalWrite(seed2,LOW);
+
+  //  //digitalWrite(level1,LOW);
+  //  //digitalWrite(level2,LOW);
+   
+   digitalWrite(relay1,LOW);
+   digitalWrite(relay2,LOW);
+   Serial.println("AGRIBOT");
+   Serial1.println("AGRIBOT");
+  
+   delay(1000);
+  
+ 
+}
+void loop()
+{ 
+ 
+  while(1)
+  {
+    if(Serial1.available()>0)
+    {
+      rw=Serial1.read();
+     Serial.println(rw);
+      if(rw=='A')
+      {
+         
+        Serial1.println("auto mode");
+        
+        automode();
+      
+      }
+      else if(rw=='M')
+      {
+          Serial1.println("manual mode");
+         
+        manualmode();
+      }
+   }
+ }
+}
+void automode()
+{
+  while(1)
+  {
+  digitalWrite(trigger,LOW);
+  delayMicroseconds(5);
+  digitalWrite(trigger,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigger,HIGH);
+  int distance=pulseIn(echo_pin,HIGH);
+  int dist=distance*0.034/2;
+  Serial1.print("Dist: ");
+  Serial1.println(dist);
+  
+  
+  delay(800);
+  if(dist<30)
+  {
+    Serial1.println("Object Detected");
+    
+    stop_robot();
+   delay(1000); 
+  }
+  else
+  {
+
+digitalWrite(grass1,HIGH);
+digitalWrite(grass2,LOW);
+delay(1500);
+  forward_movement();
+ // Grass_cutter();
+  delay(2000);
+
+  digitalWrite(robot1,LOW);
+   digitalWrite(robot2,LOW);
+   digitalWrite(robot3,LOW);
+   digitalWrite(robot4,LOW);
+  delay(1000); 
+  
+  // seed_dropon();
+  // delay(1000);
+
+  forward_movement();
+  //Grass_cutter();
+  delay(2000);
+
+   
+   digitalWrite(robot1,LOW);
+   digitalWrite(robot2,LOW);
+   digitalWrite(robot3,LOW);
+   digitalWrite(robot4,LOW);
+  delay(1000);
+   
+ 
+  Moisture_Read();
+  
+  if(M_val<200)
+  {
+    
+    
+    Serial1.println("SOIL IS DRY");
+    digitalWrite(relay1,HIGH);
+    delay(2000);
+    digitalWrite(relay1,LOW);
+    delay(1000);
+  }
+  else
+  {
+   Serial1.println("SOIL IS WET");
+   
+   digitalWrite(relay1,LOW); 
+   delay(500);
+  }
+  temp_check(); 
+  Pesticide_Check(); 
+  
+
+}
+
+}
+}
+
+void manualmode()
+  {
+    while(1)
+    {
+     if(Serial1.available() > 0)
+      {
+
+        ch = Serial1.read();
+          
+        Serial.print(ch);
+            if(ch=='A')
+            {
+              
+              Serial1.println("auto mode");
+              automode();
+            }
+           else if(ch=='F')
+            {
+              forward_movement();
+             
+            
+            }
+          else if(ch=='B')
+            {
+              
+              back_movement();
+            }
+          else if(ch=='L')
+            {
+              
+              left_movement();
+             }
+          else if(ch=='R')
+            {
+              
+              right_movement();
+            }
+                    
+           else if(ch=='S')
+            {
+              
+               stop_robot();
+            }
+           
+           else if(ch=='G')
+            {
+              Grass_cutter();
+              
+              delay(500);
+              
+            }
+
+            else if(ch=='H')
+            {
+              Grass_cutter_off();
+             
+              delay(500);
+              
+            }
+           
+            else if(ch=='T')
+            {
+              temp_check();
+              
+              
+            }
+           else if(ch=='P')
+            {
+              
+              Serial1.println("Pesticide Spraying");
+              digitalWrite(relay1,HIGH);
+              delay(2000);
+              digitalWrite(relay1,LOW);
+              delay(1000);
+              
+           }
+           else if(ch=='W')
+            {
+              
+              
+              Serial1.println("Water Pump On");
+            
+              digitalWrite(relay2,HIGH);
+              delay(2000);
+              digitalWrite(relay2,LOW);
+              delay(1000);
+           }
+          else if(ch=='M')
+            {
+              Moisture_Read();
+              if(M_val<200)
+              {
+               
+                Serial1.println("SOIL IS DRY");
+                
+                delay(1000);
+                digitalWrite(relay2,HIGH);
+                delay(1000);
+              }
+              else
+              {
+               Serial1.println("SOIL IS WET");
+               
+               delay(1000);
+               digitalWrite(relay2,LOW); 
+              }
+              
+           }
+        
+     }
+     Pesticide_Check();
+     
+  }
+
+}
+
+void Pesticide_Check()
+{
+
+  if(Serial.available()>0)
+  {
+    char chr=Serial.read();
+    Serial1.println(chr);
+    delay(500);
+
+    if(chr=='A')
+    {
+  
+  Serial1.println("Pesticide Spraying");
+ 
+  digitalWrite(relay1,HIGH);
+  delay(2000);
+  digitalWrite(relay1,LOW);
+  delay(1000);
+    }
+
+    if(chr=='B')
+    {
+    
+    Serial1.println("Healthy Plant");
+    
+    delay(2000);
+    }
+  }
+ 
+
+
+  
+  
+  
+}
+void Moisture_Read()
+{
+  M_val=analogRead(A2);
+  M_val=1023-M_val;
+  
+   
+  
+  Serial1.println("Moisture:"+String(M_val));
+   
+  delay(1000);
+}
+void temp_check()
+{
+  DHT.read11(dht_dpin);
+      Humidity=DHT.humidity;
+      tempc=DHT.temperature;
+      Serial1.print("$Humidity: ");
+      Serial1.print(DHT.humidity);   // printing Humidity on LCD
+      Serial1.print(" %");
+      Serial1.print(" # ");
+  
+      Serial1.print("$Temperature:");
+      Serial1.print(DHT.temperature);   // Printing temperature on LCD
+      Serial1.print(" C");
+      Serial1.println(" # ");
+
+ 
+
+     
+     
+     delay(1000);
+}
+void forward_movement()
+{
+  Serial1.println("FORWARD");
+  
+
+   digitalWrite(robot1,HIGH);
+   digitalWrite(robot2,LOW);
+   digitalWrite(robot3,HIGH);
+   digitalWrite(robot4,LOW);
+}
+void back_movement()
+{
+  Serial1.println("REVERSE");
+
+   digitalWrite(robot1,LOW);
+   digitalWrite(robot2,HIGH);
+   digitalWrite(robot3,LOW);
+   digitalWrite(robot4,HIGH);
+}
+
+void left_movement()
+{
+  Serial1.println("LEFT");
+  digitalWrite(robot1,HIGH);
+   digitalWrite(robot2,LOW);
+   digitalWrite(robot3,LOW);
+   digitalWrite(robot4,HIGH);
+ 
+   
+}
+void right_movement()
+{  
+ Serial1.println("RIGHT");
+ digitalWrite(robot1,LOW);
+   digitalWrite(robot2,HIGH);
+   digitalWrite(robot3,HIGH);
+   digitalWrite(robot4,LOW);
+ 
+   
+}
+void stop_robot()
+{
+  Serial1.println("STOP");
+  
+   digitalWrite(robot1,LOW);
+   digitalWrite(robot2,LOW);
+   digitalWrite(robot3,LOW);
+   digitalWrite(robot4,LOW);
+   
+   digitalWrite(relay1,LOW);
+  
+   digitalWrite(grass1,LOW);
+      digitalWrite(grass2,LOW);
+      delay(1000);
+//   digitalWrite(relay2,LOW);
+}
+void Grass_cutter()
+{
+  Serial1.println("Grass_cutter");
+    
+      digitalWrite(grass1,HIGH);
+      digitalWrite(grass2,LOW);
+      delay(2500);
+      
+    
+      
+}
+
+void Grass_cutter_off()
+{
+  Serial1.println("Grass_cutter_off");
+    
+     
+      digitalWrite(grass1,LOW);
+      digitalWrite(grass2,LOW);
+      delay(1000);
+    
+      
+}
+
+
+
